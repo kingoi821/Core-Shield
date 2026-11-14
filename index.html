@@ -1,0 +1,808 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>درع النواة | Core Shield</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;900&family=Orbitron:wght@700;900&display=swap" rel="stylesheet">
+    <style>
+        * {
+            box-sizing: border-box;
+            user-select: none;
+            -webkit-user-select: none;
+            -webkit-touch-callout: none;
+            font-family: 'Cairo', sans-serif;
+        }
+
+        html[lang="en"] .font-display {
+            font-family: 'Orbitron', 'Cairo', sans-serif;
+            letter-spacing: 0.04em;
+        }
+
+        body, html {
+            margin: 0;
+            padding: 0;
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            background-color: #060812;
+            color: #ffffff;
+        }
+
+        .cyber-grid {
+            background-image: 
+                radial-gradient(circle at 50% 50%, rgba(16, 24, 56, 0.85) 0%, rgba(6, 8, 18, 1) 85%),
+                linear-gradient(rgba(0, 243, 255, 0.04) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(255, 0, 127, 0.04) 1px, transparent 1px);
+            background-size: 100% 100%, 40px 40px, 40px 40px;
+        }
+
+        canvas {
+            display: block;
+            width: 100%;
+            height: 100%;
+            touch-action: none;
+            cursor: pointer;
+        }
+
+        .btn-neon-cyan {
+            background: rgba(0, 243, 255, 0.12);
+            border: 2px solid #00f3ff;
+            box-shadow: 0 0 15px rgba(0, 243, 255, 0.35), inset 0 0 10px rgba(0, 243, 255, 0.2);
+            transition: all 0.12s ease;
+        }
+        .btn-neon-cyan:active, .btn-neon-cyan.active-press {
+            transform: scale(0.94);
+            background: rgba(0, 243, 255, 0.35);
+            box-shadow: 0 0 25px rgba(0, 243, 255, 0.7), inset 0 0 15px rgba(0, 243, 255, 0.5);
+        }
+
+        .btn-neon-magenta {
+            background: rgba(255, 0, 127, 0.12);
+            border: 2px solid #ff007f;
+            box-shadow: 0 0 15px rgba(255, 0, 127, 0.35), inset 0 0 10px rgba(255, 0, 127, 0.2);
+            transition: all 0.12s ease;
+        }
+        .btn-neon-magenta:active, .btn-neon-magenta.active-press {
+            transform: scale(0.94);
+            background: rgba(255, 0, 127, 0.35);
+            box-shadow: 0 0 25px rgba(255, 0, 127, 0.7), inset 0 0 15px rgba(255, 0, 127, 0.5);
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #00f3ff 0%, #7000ff 50%, #ff007f 100%);
+            box-shadow: 0 0 25px rgba(112, 0, 255, 0.6);
+            transition: transform 0.15s ease, box-shadow 0.15s ease;
+        }
+        .btn-primary:hover {
+            transform: translateY(-2px) scale(1.02);
+            box-shadow: 0 0 35px rgba(0, 243, 255, 0.8);
+        }
+        .btn-primary:active {
+            transform: scale(0.96);
+        }
+
+        .glass-panel {
+            background: rgba(11, 15, 34, 0.82);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.12);
+            box-shadow: 0 20px 50px rgba(0, 0, 0, 0.75);
+        }
+
+        @keyframes pulseGlow {
+            0%, 100% { text-shadow: 0 0 15px rgba(0, 243, 255, 0.8), 0 0 30px rgba(255, 0, 127, 0.5); }
+            50% { text-shadow: 0 0 25px rgba(0, 243, 255, 1), 0 0 45px rgba(255, 0, 127, 0.9); }
+        }
+        .title-glow {
+            animation: pulseGlow 3s infinite ease-in-out;
+        }
+    </style>
+</head>
+<body class="cyber-grid relative w-full h-full overflow-hidden">
+
+    <canvas id="gameCanvas"></canvas>
+
+    <!-- شريط التحكم العلوي أثناء اللعب -->
+    <div id="topUtilityBar" class="fixed top-3 right-3 sm:top-5 sm:right-5 flex items-center gap-2 z-50 pointer-events-auto">
+        <div id="syncBadge" class="glass-panel px-3 py-2 rounded-2xl text-xs font-bold flex items-center gap-1.5 text-emerald-300 border-emerald-500/30">
+            <span id="syncDot" class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+            <span id="syncText">النقاط محفوظة</span>
+        </div>
+
+        <button id="langToggleBtn" type="button" class="glass-panel px-3.5 py-2.5 rounded-2xl text-cyan-300 hover:text-white transition active:scale-90 flex items-center gap-1.5 font-bold text-sm cursor-pointer">
+            <span id="langToggleText">EN</span>
+        </button>
+
+        <button id="muteBtn" type="button" class="glass-panel p-2.5 sm:p-3 rounded-2xl text-slate-200 hover:text-cyan-400 transition active:scale-90 cursor-pointer">
+            <span id="soundLabel">🔊</span>
+        </button>
+
+        <button id="pauseBtn" type="button" class="glass-panel p-2.5 sm:p-3 rounded-2xl text-slate-200 hover:text-pink-400 transition active:scale-90 hidden cursor-pointer">
+            ⏸️
+        </button>
+    </div>
+
+    <!-- شريط معلومات اللعبة -->
+    <div id="hud" class="fixed top-0 left-0 right-0 p-3 sm:p-5 flex items-center justify-between pointer-events-none z-10 hidden" dir="ltr">
+        <div class="flex items-center gap-2 sm:gap-3">
+            <div class="glass-panel px-4 py-2 rounded-2xl flex flex-col items-start">
+                <span id="hudScoreLabel" class="text-[11px] sm:text-xs text-slate-400 font-semibold">النقاط</span>
+                <span id="scoreDisplay" class="text-2xl sm:text-3xl font-black text-white tracking-wider font-display">0</span>
+            </div>
+
+            <div id="comboBadge" class="glass-panel px-3 py-2 rounded-2xl flex flex-col items-start border-cyan-400/40">
+                <span id="hudComboLabel" class="text-[10px] sm:text-xs text-cyan-300 font-semibold">تتابع</span>
+                <span id="comboDisplay" class="text-lg sm:text-xl font-black text-cyan-400 font-display">x1</span>
+            </div>
+
+            <div id="healthContainer" class="glass-panel px-3 py-2.5 rounded-2xl flex items-center gap-1.5">
+                <span class="heart-icon text-rose-500 text-lg sm:text-xl">❤</span>
+                <span class="heart-icon text-rose-500 text-lg sm:text-xl">❤</span>
+                <span class="heart-icon text-rose-500 text-lg sm:text-xl">❤</span>
+                <span class="heart-icon text-rose-500 text-lg sm:text-xl">❤</span>
+                <span class="heart-icon text-rose-500 text-lg sm:text-xl">❤</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- أزرار التحكم بالأسفل -->
+    <div id="mobileControls" class="fixed bottom-4 left-0 right-0 px-4 sm:px-8 flex items-center justify-between gap-4 sm:gap-6 z-40 pointer-events-auto max-w-xl mx-auto hidden">
+        <button id="btnReverse" type="button" class="btn-neon-cyan flex-1 py-4 sm:py-5 px-4 rounded-3xl flex flex-col items-center justify-center gap-1 cursor-pointer">
+            <span id="btnReverseLabel" class="text-cyan-300 font-black text-base sm:text-xl">عكس الدوران (Space)</span>
+        </button>
+
+        <button id="btnSwap" type="button" class="btn-neon-magenta flex-1 py-4 sm:py-5 px-4 rounded-3xl flex flex-col items-center justify-center gap-1 cursor-pointer">
+            <span id="btnSwapLabel" class="text-pink-300 font-black text-base sm:text-xl">تبديل الألوان (Shift)</span>
+        </button>
+    </div>
+
+    <!-- شاشة البداية -->
+    <div id="startScreen" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm pointer-events-auto">
+        <div class="glass-panel max-w-lg w-full rounded-3xl p-6 sm:p-8 text-center flex flex-col items-center gap-5 sm:gap-6 relative">
+            
+            <!-- زر تغيير اللغة في أعلى الشاشة الرئيسية -->
+            <button id="mainLangToggleBtn" type="button" class="absolute top-4 left-4 sm:top-6 sm:left-6 glass-panel px-3.5 py-2 rounded-2xl text-cyan-300 hover:text-white transition active:scale-90 flex items-center gap-1.5 font-bold text-xs cursor-pointer">
+                <span id="mainLangToggleText">EN</span>
+            </button>
+
+            <div class="relative w-20 h-20 sm:w-24 sm:h-24 rounded-full border-2 border-dashed border-slate-500 flex items-center justify-center mt-3 sm:mt-0">
+                <div class="w-7 h-7 sm:w-8 sm:h-8 rounded-full bg-white shadow-[0_0_20px_#fff]"></div>
+                <span class="absolute -top-2 w-4 h-4 rounded-full bg-[#00f3ff] shadow-[0_0_12px_#00f3ff]"></span>
+                <span class="absolute -bottom-2 w-4 h-4 rounded-full bg-[#ff007f] shadow-[0_0_12px_#ff007f]"></span>
+            </div>
+
+            <div>
+                <h1 id="gameTitle" class="text-3xl sm:text-5xl font-black text-white title-glow mb-2 font-display">درع النواة</h1>
+                <p id="gameSubtitle" class="text-slate-300 text-sm sm:text-base leading-relaxed">
+                    احمِ نواة الطاقة من النبضات القادمة! صدّ كل نبضة بالدرع <span class="text-[#00f3ff] font-bold">السماوي</span> أو <span class="text-[#ff007f] font-bold">الوردي</span> المطابق للونها.
+                </p>
+            </div>
+
+            <div id="instructionsGrid" class="w-full grid grid-cols-1 sm:grid-cols-2 gap-3 text-right" dir="rtl">
+                <div class="bg-slate-900/80 border border-cyan-500/30 rounded-2xl p-3 flex flex-col items-start gap-1">
+                    <h3 id="instReverseTitle" class="font-bold text-cyan-300 text-sm">عكس الدوران</h3>
+                    <p id="instReverseDesc" class="text-[11px] text-slate-400">نقر أو <span class="text-white font-bold">Space</span></p>
+                </div>
+
+                <div class="bg-slate-900/80 border border-pink-500/30 rounded-2xl p-3 flex flex-col items-start gap-1">
+                    <h3 id="instSwapTitle" class="font-bold text-pink-300 text-sm">تبديل الألوان</h3>
+                    <p id="instSwapDesc" class="text-[11px] text-slate-400">نقر يمين أو <span class="text-white font-bold">Shift</span></p>
+                </div>
+            </div>
+
+            <div class="flex flex-wrap items-center justify-center gap-2 text-xs sm:text-sm">
+                <div class="flex items-center gap-2 text-amber-300 bg-amber-500/10 border border-amber-500/30 px-4 py-1.5 rounded-full">
+                    <span id="startBestLabel">🏆 أعلى نتيجة محفوظة:</span>
+                    <span id="startHighScore" class="font-black text-base font-display">0</span>
+                </div>
+                <div class="flex items-center gap-2 text-cyan-300 bg-cyan-500/10 border border-cyan-500/30 px-4 py-1.5 rounded-full">
+                    <span id="startTotalBlocksLabel">🛡️ إجمالي الصدّات:</span>
+                    <span id="startTotalBlocks" class="font-black text-base font-display">0</span>
+                </div>
+            </div>
+
+            <button id="startBtn" type="button" class="btn-primary w-full py-4 rounded-2xl font-black text-lg sm:text-xl text-white cursor-pointer tracking-wide">
+                ابدأ الدفاع الآن
+            </button>
+        </div>
+    </div>
+
+    <!-- شاشة الإيقاف المؤقت -->
+    <div id="pauseScreen" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-md hidden pointer-events-auto">
+        <div class="glass-panel max-w-sm w-full rounded-3xl p-7 text-center flex flex-col items-center gap-5">
+            <h2 id="pauseTitle" class="text-3xl font-black text-white">اللعبة متوقفة</h2>
+            <button id="resumeBtn" type="button" class="btn-primary w-full py-3.5 rounded-2xl font-bold text-lg text-white cursor-pointer">
+                استكمال اللعب
+            </button>
+            <button id="restartFromPauseBtn" type="button" class="glass-panel w-full py-3.5 rounded-2xl font-bold text-slate-200 cursor-pointer">
+                إعادة المحاولة
+            </button>
+        </div>
+    </div>
+
+    <!-- شاشة نهاية اللعبة -->
+    <div id="gameOverScreen" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md hidden pointer-events-auto">
+        <div class="glass-panel max-w-md w-full rounded-3xl p-6 sm:p-8 text-center flex flex-col items-center gap-5 border-rose-500/40">
+            <h2 id="gameOverTitle" class="text-3xl sm:text-4xl font-black text-rose-400 font-display">انهارت النواة!</h2>
+            <div class="w-full grid grid-cols-2 gap-3">
+                <div class="bg-slate-900/80 border border-white/10 rounded-2xl p-3 flex flex-col items-center">
+                    <span id="finalScoreLabel" class="text-xs text-slate-400">نتيجتك</span>
+                    <span id="finalScore" class="text-2xl font-black text-white mt-1 font-display">0</span>
+                </div>
+                <div class="bg-slate-900/80 border border-amber-500/30 rounded-2xl p-3 flex flex-col items-center">
+                    <span id="finalBestLabel" class="text-xs text-amber-300">أعلى نتيجة</span>
+                    <span id="finalHighScore" class="text-2xl font-black text-amber-400 mt-1 font-display">0</span>
+                </div>
+            </div>
+            <button id="restartBtn" type="button" class="btn-primary w-full py-4 rounded-2xl font-black text-xl text-white cursor-pointer">
+                العب مجدداً
+            </button>
+        </div>
+    </div>
+
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getAuth, signInAnonymously, signInWithCustomToken } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getFirestore, doc, getDoc, setDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
+        const appId = typeof __app_id !== 'undefined' ? __app_id : 'core-shield-default';
+        let db = null; let auth = null; let currentUser = null;
+
+        window.savePlayerStatsToCloud = async function(stats) {
+            if (!db || !currentUser) return;
+            try {
+                const statsRef = doc(db, 'artifacts', appId, 'users', currentUser.uid, 'gameData', 'coreShieldStats');
+                await setDoc(statsRef, { highScore: stats.highScore, updatedAt: Date.now() }, { merge: true });
+            } catch (err) { console.error(err); }
+        };
+
+        async function initCloudStorage() {
+            try {
+                if (typeof __firebase_config === 'undefined') return;
+                const app = initializeApp(JSON.parse(__firebase_config));
+                auth = getAuth(app); db = getFirestore(app);
+                if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
+                    await signInWithCustomToken(auth, __initial_auth_token);
+                } else { await signInAnonymously(auth); }
+                currentUser = auth.currentUser;
+            } catch (err) { console.error(err); }
+        }
+        initCloudStorage();
+    </script>
+
+    <script>
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+
+        let currentLang = 'ar';
+        const TRANSLATIONS = {
+            ar: {
+                pageTitle: 'درع النواة | Core Shield',
+                langBtnText: 'EN',
+                gameTitle: 'درع النواة',
+                gameSubtitle: 'احمِ نواة الطاقة من النبضات القادمة! صدّ كل نبضة بالدرع <span class="text-[#00f3ff] font-bold">السماوي</span> أو <span class="text-[#ff007f] font-bold">الوردي</span> المطابق للونها.',
+                instReverseTitle: 'عكس الدوران',
+                instReverseDesc: 'نقر أو <span class="text-white font-bold">Space</span>',
+                instSwapTitle: 'تبديل الألوان',
+                instSwapDesc: 'نقر يمين أو <span class="text-white font-bold">Shift</span>',
+                startBestLabel: '🏆 أعلى نتيجة محفوظة:',
+                startTotalBlocksLabel: '🛡️ إجمالي الصدّات:',
+                startBtn: 'ابدأ الدفاع الآن',
+                hudScoreLabel: 'النقاط',
+                hudComboLabel: 'تتابع',
+                btnReverseLabel: 'عكس الدوران (Space)',
+                btnSwapLabel: 'تبديل الألوان (Shift)',
+                pauseTitle: 'اللعبة متوقفة',
+                resumeBtn: 'استكمال اللعب',
+                restartFromPauseBtn: 'إعادة المحاولة',
+                gameOverTitle: 'انهارت النواة!',
+                finalScoreLabel: 'نتيجتك',
+                finalBestLabel: 'أعلى نتيجة',
+                restartBtn: 'العب مجدداً'
+            },
+            en: {
+                pageTitle: 'Core Shield | درع النواة',
+                langBtnText: 'عربي',
+                gameTitle: 'Core Shield',
+                gameSubtitle: 'Defend the energy core from incoming pulses! Block each pulse with the matching <span class="text-[#00f3ff] font-bold">cyan</span> or <span class="text-[#ff007f] font-bold">magenta</span> shield.',
+                instReverseTitle: 'Reverse Orbit',
+                instReverseDesc: 'Click or <span class="text-white font-bold">Space</span>',
+                instSwapTitle: 'Swap Colors',
+                instSwapDesc: 'Right Click or <span class="text-white font-bold">Shift</span>',
+                startBestLabel: '🏆 SAVED HIGH SCORE:',
+                startTotalBlocksLabel: '🛡️ TOTAL BLOCKS:',
+                startBtn: 'START DEFENSE',
+                hudScoreLabel: 'SCORE',
+                hudComboLabel: 'COMBO',
+                btnReverseLabel: 'REVERSE (Space)',
+                btnSwapLabel: 'SWAP (Shift)',
+                pauseTitle: 'GAME PAUSED',
+                resumeBtn: 'RESUME',
+                restartFromPauseBtn: 'RESTART',
+                gameOverTitle: 'CORE BREACHED!',
+                finalScoreLabel: 'FINAL SCORE',
+                finalBestLabel: 'BEST SCORE',
+                restartBtn: 'PLAY AGAIN'
+            }
+        };
+
+        function applyLanguage(lang) {
+            currentLang = lang;
+            document.documentElement.lang = lang;
+            document.documentElement.dir = lang === 'ar' ? 'rtl' : 'ltr';
+            const t = TRANSLATIONS[lang];
+
+            document.title = t.pageTitle;
+            document.getElementById('mainLangToggleText').textContent = t.langBtnText;
+            document.getElementById('langToggleText').textContent = t.langBtnText;
+            document.getElementById('gameTitle').textContent = t.gameTitle;
+            document.getElementById('gameSubtitle').innerHTML = t.gameSubtitle;
+            document.getElementById('instReverseTitle').textContent = t.instReverseTitle;
+            document.getElementById('instReverseDesc').innerHTML = t.instReverseDesc;
+            document.getElementById('instSwapTitle').textContent = t.instSwapTitle;
+            document.getElementById('instSwapDesc').innerHTML = t.instSwapDesc;
+            document.getElementById('startBestLabel').textContent = t.startBestLabel;
+            document.getElementById('startTotalBlocksLabel').textContent = t.startTotalBlocksLabel;
+            document.getElementById('startBtn').textContent = t.startBtn;
+            document.getElementById('hudScoreLabel').textContent = t.hudScoreLabel;
+            document.getElementById('hudComboLabel').textContent = t.hudComboLabel;
+            document.getElementById('btnReverseLabel').textContent = t.btnReverseLabel;
+            document.getElementById('btnSwapLabel').textContent = t.btnSwapLabel;
+            document.getElementById('pauseTitle').textContent = t.pauseTitle;
+            document.getElementById('resumeBtn').textContent = t.resumeBtn;
+            document.getElementById('restartFromPauseBtn').textContent = t.restartFromPauseBtn;
+            document.getElementById('gameOverTitle').textContent = t.gameOverTitle;
+            document.getElementById('finalScoreLabel').textContent = t.finalScoreLabel;
+            document.getElementById('finalBestLabel').textContent = t.finalBestLabel;
+            document.getElementById('restartBtn').textContent = t.restartBtn;
+        }
+
+        let gameState = 'START';
+        let width = window.innerWidth, height = window.innerHeight;
+        let centerX = width / 2, centerY = height / 2;
+        let orbitRadius = 110, coreRadius = 28;
+
+        let score = 0, combo = 1, health = 5, wave = 1, highScore = 0, totalBlocks = 0;
+        let orbitAngle = 0, orbitDirection = 1, baseOrbitSpeed = 2.45;
+        let shieldColors = ['cyan', 'magenta'];
+        let shieldArcSpan = Math.PI * 0.44;
+        let swapFlash = 0;
+        let corePulse = 0;
+        let screenShake = 0;
+
+        let projectiles = [], particles = [], shockwaves = [], floatingTexts = [], spawnTimer = 0, lastTime = performance.now();
+
+        function resizeCanvas() {
+            width = window.innerWidth;
+            height = window.innerHeight;
+            canvas.width = width * window.devicePixelRatio;
+            canvas.height = height * window.devicePixelRatio;
+            ctx.scale(window.devicePixelRatio, window.devicePixelRatio);
+            centerX = width / 2;
+            centerY = height / 2;
+            orbitRadius = Math.min(width, height) * 0.17;
+            if (orbitRadius < 85) orbitRadius = 85;
+        }
+        window.addEventListener('resize', resizeCanvas);
+        resizeCanvas();
+
+        function triggerReverse() { orbitDirection *= -1; }
+        function triggerSwap() {
+            const temp = shieldColors[0];
+            shieldColors[0] = shieldColors[1];
+            shieldColors[1] = temp;
+            swapFlash = 1.0;
+        }
+
+        function spawnExplosion(x, y, colorHex, count = 18) {
+            for (let i = 0; i < count; i++) {
+                const angle = Math.random() * Math.PI * 2;
+                const speed = 40 + Math.random() * 160;
+                particles.push({
+                    x: x, y: y,
+                    vx: Math.cos(angle) * speed,
+                    vy: Math.sin(angle) * speed,
+                    color: colorHex,
+                    size: 2 + Math.random() * 3.5,
+                    alpha: 1.0,
+                    decay: 1.4 + Math.random() * 1.5
+                });
+            }
+        }
+
+        function addShockwave(x, y, color, maxR) {
+            shockwaves.push({ x: x, y: y, radius: 10, maxRadius: maxR, color: color, alpha: 0.8 });
+        }
+
+        function addFloatingText(x, y, text, color) {
+            floatingTexts.push({ x: x, y: y, text: text, color: color, vy: -42, alpha: 1.0 });
+        }
+
+        function startGame() {
+            score = 0; combo = 1; health = 5; wave = 1;
+            orbitAngle = 0; orbitDirection = 1;
+            shieldColors = ['cyan', 'magenta'];
+            projectiles = []; particles = []; shockwaves = []; floatingTexts = []; spawnTimer = 0.6;
+
+            document.getElementById('scoreDisplay').textContent = '0';
+            document.getElementById('comboDisplay').textContent = 'x1';
+            updateHealthUI();
+
+            document.getElementById('startScreen').classList.add('hidden');
+            document.getElementById('pauseScreen').classList.add('hidden');
+            document.getElementById('gameOverScreen').classList.add('hidden');
+            document.getElementById('hud').classList.remove('hidden');
+            document.getElementById('pauseBtn').classList.remove('hidden');
+            document.getElementById('mobileControls').classList.remove('hidden');
+
+            gameState = 'PLAYING';
+            lastTime = performance.now();
+        }
+
+        function togglePause() {
+            if (gameState === 'PLAYING') {
+                gameState = 'PAUSED';
+                document.getElementById('pauseScreen').classList.remove('hidden');
+            } else if (gameState === 'PAUSED') {
+                gameState = 'PLAYING';
+                document.getElementById('pauseScreen').classList.add('hidden');
+                lastTime = performance.now();
+            }
+        }
+
+        function endGame() {
+            gameState = 'GAMEOVER';
+            document.getElementById('hud').classList.add('hidden');
+            document.getElementById('pauseBtn').classList.add('hidden');
+            document.getElementById('mobileControls').classList.add('hidden');
+            document.getElementById('gameOverScreen').classList.remove('hidden');
+
+            document.getElementById('finalScore').textContent = score;
+            if (score > highScore) highScore = score;
+            document.getElementById('finalHighScore').textContent = highScore;
+            document.getElementById('startHighScore').textContent = highScore;
+            document.getElementById('startTotalBlocks').textContent = totalBlocks;
+
+            if (typeof window.savePlayerStatsToCloud === 'function') {
+                window.savePlayerStatsToCloud({ highScore });
+            }
+        }
+
+        function updateHealthUI() {
+            const hearts = document.querySelectorAll('.heart-icon');
+            hearts.forEach((h, idx) => {
+                h.style.opacity = idx < health ? '1' : '0.2';
+            });
+        }
+
+        window.addEventListener('DOMContentLoaded', () => {
+            const startBtn = document.getElementById('startBtn');
+            const restartBtn = document.getElementById('restartBtn');
+            const restartFromPauseBtn = document.getElementById('restartFromPauseBtn');
+            const resumeBtn = document.getElementById('resumeBtn');
+            const pauseBtn = document.getElementById('pauseBtn');
+            const btnReverse = document.getElementById('btnReverse');
+            const btnSwap = document.getElementById('btnSwap');
+            const mainLangToggleBtn = document.getElementById('mainLangToggleBtn');
+            const langToggleBtn = document.getElementById('langToggleBtn');
+
+            const toggleLangFunc = (e) => {
+                e.stopPropagation();
+                applyLanguage(currentLang === 'ar' ? 'en' : 'ar');
+            };
+
+            if (mainLangToggleBtn) mainLangToggleBtn.onclick = toggleLangFunc;
+            if (langToggleBtn) langToggleBtn.onclick = toggleLangFunc;
+
+            if (startBtn) startBtn.onclick = startGame;
+            if (restartBtn) restartBtn.onclick = startGame;
+            if (restartFromPauseBtn) restartFromPauseBtn.onclick = startGame;
+            if (resumeBtn) resumeBtn.onclick = togglePause;
+            if (pauseBtn) pauseBtn.onclick = togglePause;
+
+            if (btnReverse) {
+                btnReverse.onclick = (e) => {
+                    e.stopPropagation();
+                    if (gameState === 'PLAYING') triggerReverse();
+                };
+            }
+
+            if (btnSwap) {
+                btnSwap.onclick = (e) => {
+                    e.stopPropagation();
+                    if (gameState === 'PLAYING') triggerSwap();
+                };
+            }
+
+            window.addEventListener('keydown', (e) => {
+                if (gameState !== 'PLAYING') {
+                    if (e.code === 'Space' && gameState === 'START') {
+                        e.preventDefault();
+                        startGame();
+                    }
+                    return;
+                }
+
+                if (e.code === 'Space') {
+                    e.preventDefault();
+                    triggerReverse();
+                } else if (e.code === 'ShiftLeft' || e.code === 'ShiftRight') {
+                    e.preventDefault();
+                    triggerSwap();
+                } else if (e.code === 'KeyP' || e.code === 'Escape') {
+                    e.preventDefault();
+                    togglePause();
+                }
+            });
+        });
+
+        canvas.onclick = () => { if (gameState === 'PLAYING') triggerReverse(); };
+        canvas.oncontextmenu = (e) => { e.preventDefault(); if (gameState === 'PLAYING') triggerSwap(); };
+
+        function update(dt) {
+            if (gameState !== 'PLAYING') return;
+
+            orbitAngle = (orbitAngle + orbitDirection * (baseOrbitSpeed + wave * 0.12) * dt) % (Math.PI * 2);
+
+            if (swapFlash > 0) swapFlash = Math.max(0, swapFlash - dt * 4.5);
+            if (corePulse > 0) corePulse = Math.max(0, corePulse - dt * 3.5);
+            if (screenShake > 0) screenShake = Math.max(0, screenShake - dt * 40);
+
+            spawnTimer -= dt;
+            if (spawnTimer <= 0) {
+                const angle = Math.random() * Math.PI * 2;
+                const dist = Math.max(width, height) * 0.65;
+                projectiles.push({
+                    x: centerX + Math.cos(angle) * dist,
+                    y: centerY + Math.sin(angle) * dist,
+                    color: Math.random() < 0.5 ? 'cyan' : 'magenta',
+                    speed: 135 + wave * 16,
+                    radius: 10,
+                    trail: []
+                });
+                spawnTimer = Math.max(0.55, 1.4 - wave * 0.08);
+            }
+
+            const shield0Angle = orbitAngle;
+            const shield1Angle = orbitAngle + Math.PI;
+            const halfArc = shieldArcSpan / 2 + 0.1;
+
+            for (let i = projectiles.length - 1; i >= 0; i--) {
+                const p = projectiles[i];
+                const angleToCore = Math.atan2(centerY - p.y, centerX - p.x);
+                p.x += Math.cos(angleToCore) * p.speed * dt;
+                p.y += Math.sin(angleToCore) * p.speed * dt;
+
+                p.trail.push({ x: p.x, y: p.y });
+                if (p.trail.length > 8) p.trail.shift();
+
+                const dist = Math.hypot(centerX - p.x, centerY - p.y);
+                const colorHex = p.color === 'cyan' ? '#00f3ff' : '#ff007f';
+
+                if (dist <= orbitRadius + 12 && dist >= orbitRadius - 16) {
+                    const hitAngle = Math.atan2(p.y - centerY, p.x - centerX);
+                    let diff0 = Math.abs(hitAngle - shield0Angle) % (Math.PI * 2);
+                    if (diff0 > Math.PI) diff0 = Math.PI * 2 - diff0;
+                    let diff1 = Math.abs(hitAngle - shield1Angle) % (Math.PI * 2);
+                    if (diff1 > Math.PI) diff1 = Math.PI * 2 - diff1;
+
+                    let matched = false;
+                    if (diff0 <= halfArc && shieldColors[0] === p.color) matched = true;
+                    if (diff1 <= halfArc && shieldColors[1] === p.color) matched = true;
+
+                    if (matched) {
+                        const earned = 15 * combo;
+                        score += earned;
+                        combo = Math.min(combo + 1, 10);
+                        totalBlocks++;
+                        corePulse = 0.45;
+                        document.getElementById('scoreDisplay').textContent = score;
+                        document.getElementById('comboDisplay').textContent = `x${combo}`;
+                        spawnExplosion(p.x, p.y, colorHex, 18);
+                        addShockwave(p.x, p.y, colorHex, 55);
+                        addFloatingText(p.x, p.y - 12, `+${earned}`, colorHex);
+                        projectiles.splice(i, 1);
+                        if (score >= wave * 150) wave++;
+                        continue;
+                    } else {
+                        health--;
+                        combo = 1;
+                        corePulse = 0.8;
+                        screenShake = 12;
+                        document.getElementById('comboDisplay').textContent = `x1`;
+                        updateHealthUI();
+                        spawnExplosion(p.x, p.y, '#ff3355', 20);
+                        addShockwave(centerX, centerY, '#ff3355', 70);
+                        projectiles.splice(i, 1);
+                        if (health <= 0) endGame();
+                        continue;
+                    }
+                }
+
+                if (dist <= coreRadius) {
+                    health--;
+                    corePulse = 0.8;
+                    screenShake = 12;
+                    updateHealthUI();
+                    spawnExplosion(centerX, centerY, '#ff3355', 22);
+                    addShockwave(centerX, centerY, '#ff3355', 75);
+                    projectiles.splice(i, 1);
+                    if (health <= 0) endGame();
+                }
+            }
+
+            for (let i = particles.length - 1; i >= 0; i--) {
+                const pt = particles[i];
+                pt.x += pt.vx * dt; pt.y += pt.vy * dt;
+                pt.vx *= 0.93; pt.vy *= 0.93;
+                pt.alpha -= pt.decay * dt;
+                if (pt.alpha <= 0) particles.splice(i, 1);
+            }
+
+            for (let i = shockwaves.length - 1; i >= 0; i--) {
+                const sw = shockwaves[i];
+                sw.radius += (sw.maxRadius - sw.radius) * 8 * dt;
+                sw.alpha -= 2 * dt;
+                if (sw.alpha <= 0) shockwaves.splice(i, 1);
+            }
+
+            for (let i = floatingTexts.length - 1; i >= 0; i--) {
+                const ft = floatingTexts[i];
+                ft.y += ft.vy * dt;
+                ft.alpha -= 1.5 * dt;
+                if (ft.alpha <= 0) floatingTexts.splice(i, 1);
+            }
+        }
+
+        function draw() {
+            ctx.save();
+            if (screenShake > 0) {
+                const sx = (Math.random() - 0.5) * screenShake;
+                const sy = (Math.random() - 0.5) * screenShake;
+                ctx.translate(sx, sy);
+            }
+
+            ctx.clearRect(0, 0, width, height);
+
+            // المدار المتقطع
+            ctx.beginPath();
+            ctx.arc(centerX, centerY, orbitRadius, 0, Math.PI * 2);
+            ctx.strokeStyle = 'rgba(0, 243, 255, 0.22)';
+            ctx.lineWidth = 2.5;
+            ctx.setLineDash([8, 10]);
+            ctx.stroke();
+            ctx.setLineDash([]);
+
+            // الدروع المدارية الحيوية
+            drawShield(orbitAngle, shieldColors[0]);
+            drawShield(orbitAngle + Math.PI, shieldColors[1]);
+
+            // موجات الصدمة
+            shockwaves.forEach(sw => {
+                ctx.save();
+                ctx.beginPath();
+                ctx.arc(sw.x, sw.y, sw.radius, 0, Math.PI * 2);
+                ctx.strokeStyle = sw.color;
+                ctx.globalAlpha = Math.max(0, sw.alpha);
+                ctx.lineWidth = 3.5;
+                ctx.stroke();
+                ctx.restore();
+            });
+
+            // النواة المتوهجة مع نبض الحيوية
+            const currentCoreR = coreRadius + corePulse * 7;
+            const coreGrad = ctx.createRadialGradient(centerX, centerY, 2, centerX, centerY, currentCoreR * 2);
+            coreGrad.addColorStop(0, '#ffffff');
+            coreGrad.addColorStop(0.4, health <= 1 ? 'rgba(255, 51, 85, 0.9)' : 'rgba(0, 243, 255, 0.85)');
+            coreGrad.addColorStop(1, 'rgba(0, 0, 0, 0)');
+
+            ctx.fillStyle = coreGrad;
+            ctx.beginPath();
+            ctx.arc(centerX, centerY, currentCoreR * 2, 0, Math.PI * 2);
+            ctx.fill();
+
+            ctx.fillStyle = '#ffffff';
+            ctx.beginPath();
+            ctx.arc(centerX, centerY, currentCoreR * 0.7, 0, Math.PI * 2);
+            ctx.fill();
+
+            // مسارات النبضات الضوئية
+            projectiles.forEach(p => {
+                const colorHex = p.color === 'cyan' ? '#00f3ff' : '#ff007f';
+                for (let t = 0; t < p.trail.length; t++) {
+                    const ratio = (t + 1) / p.trail.length;
+                    ctx.beginPath();
+                    ctx.arc(p.trail[t].x, p.trail[t].y, p.radius * ratio * 0.7, 0, Math.PI * 2);
+                    ctx.fillStyle = colorHex;
+                    ctx.globalAlpha = ratio * 0.4;
+                    ctx.fill();
+                }
+                ctx.globalAlpha = 1;
+
+                ctx.save();
+                ctx.shadowBlur = 15;
+                ctx.shadowColor = colorHex;
+                ctx.fillStyle = colorHex;
+                ctx.beginPath();
+                ctx.arc(p.x, p.y, p.radius, 0, Math.PI * 2);
+                ctx.fill();
+
+                ctx.fillStyle = '#ffffff';
+                ctx.beginPath();
+                ctx.arc(p.x, p.y, p.radius * 0.4, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.restore();
+            });
+
+            // جسيمات الانفجارات المتطايرة
+            particles.forEach(pt => {
+                ctx.save();
+                ctx.globalAlpha = Math.max(0, pt.alpha);
+                ctx.fillStyle = pt.color;
+                ctx.beginPath();
+                ctx.arc(pt.x, pt.y, pt.size, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.restore();
+            });
+
+            // النصوص العائمة (النقاط)
+            floatingTexts.forEach(ft => {
+                ctx.save();
+                ctx.globalAlpha = Math.max(0, ft.alpha);
+                ctx.fillStyle = ft.color;
+                ctx.font = '900 18px Cairo, sans-serif';
+                ctx.textAlign = 'center';
+                ctx.fillText(ft.text, ft.x, ft.y);
+                ctx.restore();
+            });
+
+            ctx.restore();
+        }
+
+        function drawShield(angle, colorKey) {
+            const colorHex = colorKey === 'cyan' ? '#00f3ff' : '#ff007f';
+            const startA = angle - shieldArcSpan / 2;
+            const endA = angle + shieldArcSpan / 2;
+
+            ctx.save();
+            ctx.lineCap = 'round';
+            ctx.lineWidth = 11 + swapFlash * 4;
+            ctx.strokeStyle = colorHex;
+            ctx.shadowBlur = 22 + swapFlash * 15;
+            ctx.shadowColor = colorHex;
+
+            ctx.beginPath();
+            ctx.arc(centerX, centerY, orbitRadius, startA, endA);
+            ctx.stroke();
+
+            ctx.lineWidth = 3.5;
+            ctx.strokeStyle = '#ffffff';
+            ctx.beginPath();
+            ctx.arc(centerX, centerY, orbitRadius, startA + 0.08, endA - 0.08);
+            ctx.stroke();
+            ctx.restore();
+        }
+
+        function gameLoop(timestamp) {
+            const dt = Math.min(0.05, (timestamp - lastTime) / 1000);
+            lastTime = timestamp;
+            if (gameState === 'START') {
+                orbitAngle = (orbitAngle + 1.4 * dt) % (Math.PI * 2);
+            } else {
+                update(dt);
+            }
+            draw();
+            requestAnimationFrame(gameLoop);
+        }
+
+        window.onload = () => {
+            lastTime = performance.now();
+            requestAnimationFrame(gameLoop);
+        };
+    </script>
+</body>
+</html>
